@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fast Stock Receive</title>
+    <style>
+        body { font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif; margin: 20px; background-color: #f8f9fa; color: #212529; font-size: 16px; line-height: 1.5; }
+        h1 { color: #343a40; border-bottom: 1px solid #ced4da; padding-bottom: 8px; margin-bottom: 20px; font-weight: 600; }
+        h2 { color: #495057; margin: 25px 0 10px; font-size: 1.3em; font-weight: 600; }
+        form { margin-top: 20px; }
+        .form-section { margin-bottom: 20px; padding: 15px; background-color: #e9ecef; border-radius: 5px; }
+        .form-group { margin-bottom: 15px; }
+        label { font-weight: 500; display: block; margin-bottom: 5px; color: #495057; }
+        input[type=text], input[type=date], input[type=number], textarea {
+            width: 100%; padding: 10px; border: 1px solid #ced4da; border-radius: 4px;
+            box-sizing: border-box; font-size: 1em;
+        }
+        textarea { min-height: 60px; resize: vertical; }
+        .item-row { display: flex; gap: 10px; margin-bottom: 10px; align-items: center; }
+        .item-row input[type=text] { flex-grow: 3; }
+        .item-row input[type=number] { width: 100px; flex-grow: 1; }
+        .item-row .remove-btn {
+            padding: 8px 12px; background-color: #dc3545; color: white; border: none;
+            border-radius: 4px; cursor: pointer; font-size: 0.9em;
+        }
+        .add-item-btn {
+            padding: 8px 15px; background-color: #28a745; color: white; border: none;
+            border-radius: 4px; cursor: pointer; font-size: 0.9em; margin-bottom:15px;
+        }
+        button[type=submit], .action-link {
+            display: inline-block; margin-top: 20px; padding: 10px 20px; color: white;
+            text-decoration: none; border-radius: 4px; border: none; cursor: pointer; font-size: 1em;
+        }
+        button[type=submit] { background-color: #007bff; }
+        .action-link.cancel { background-color: #6c757d; margin-left: 15px; }
+        .alert { padding: 15px; margin-bottom: 20px; border: 1px solid transparent; border-radius: 5px; font-size: 0.95em; }
+        .alert-error { color: #842029; background-color: #f8d7da; border-color: #f5c2c7; }
+        .alert-warning { color: #664d03; background-color: #fff3cd; border-color: #ffecb5; }
+        .optional-note { font-size: 0.9em; color: #6c757d; font-weight: normal; }
+        .field-note { font-size: 0.9em; color: #6c757d; margin-top: 4px; display: block;}
+    </style>
+</head>
+<body>
+    <h1>Fast Stock Receive</h1>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <form action="{{ url_for('receive_stock_fast') }}" method="POST">
+        <div class="form-section">
+            <h2>Order Details</h2>
+            <div class="form-group">
+                <label for="order_number">Order Reference / Number <span class="optional-note">(Optional)</span></label>
+                <input type="text" id="order_number" name="order_number" value="{{ submitted_data.order_number or '' }}" placeholder="Enter order ref...">
+            </div>
+            <div class="form-group">
+                <label for="order_date">Order Date <span class="optional-note">(Optional - Defaults to Now)</span></label>
+                <input type="date" id="order_date" name="order_date" value="{{ submitted_data.order_date or '' }}">
+                <span class="field-note">Leave blank to use current date and time.</span>
+            </div>
+            <div class="form-group">
+                <label for="order_notes">Order Notes <span class="optional-note">(Optional)</span></label>
+                <textarea id="order_notes" name="order_notes" rows="2">{{ submitted_data.order_notes or '' }}</textarea>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h2>Items Received</h2>
+            <div id="items-container">
+                {% if submitted_data and submitted_data.items %}
+                    {% for item in submitted_data.items %}
+                    <div class="item-row">
+                        <input type="text" name="part_identifier[]" placeholder="Part SKU or Artikelnummer" value="{{ item.part_identifier or '' }}" required>
+                        <input type="number" name="quantity[]" placeholder="Qty" value="{{ item.quantity or '' }}" min="1" required>
+                        <button type="button" class="remove-btn" onclick="removeItemRow(this)">Remove</button>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                 <div class="item-row">
+                    <input type="text" name="part_identifier[]" placeholder="Part SKU or Artikelnummer" required>
+                    <input type="number" name="quantity[]" placeholder="Qty" min="1" required>
+                    <button type="button" class="remove-btn" onclick="removeItemRow(this)">Remove</button>
+                </div>
+                {% endif %}
+            </div>
+            <button type="button" class="add-item-btn" onclick="addItemRow()">+ Add Another Part</button>
+        </div>
+
+        <button type="submit">Add Received Items</button>
+        <a href="{{ url_for('index') }}" class="action-link cancel">Cancel</a>
+    </form>
+
+<script>
+    function addItemRow() {
+        const itemsContainer = document.getElementById('items-container');
+        const newItemRow = document.createElement('div');
+        newItemRow.classList.add('item-row');
+        newItemRow.innerHTML = `
+            <input type="text" name="part_identifier[]" placeholder="Part SKU or Artikelnummer" required>
+            <input type="number" name="quantity[]" placeholder="Qty" min="1" required>
+            <button type="button" class="remove-btn" onclick="removeItemRow(this)">Remove</button>
+        `;
+        itemsContainer.appendChild(newItemRow);
+    }
+
+    function removeItemRow(button) {
+        const itemRow = button.parentElement;
+        // Do not remove if it's the last row, or ensure at least one row remains if desired
+        const container = document.getElementById('items-container');
+        if (container.getElementsByClassName('item-row').length > 1) {
+            itemRow.remove();
+        } else {
+            alert("At least one item row is required.");
+        }
+    }
+
+    // Ensure at least one item row exists on page load if not pre-filled by errors
+    document.addEventListener('DOMContentLoaded', function() {
+        const container = document.getElementById('items-container');
+        if (container.getElementsByClassName('item-row').length === 0) {
+            // addItemRow(); // No longer needed if we pre-fill one row in HTML
+        }
+    });
+</script>
+</body>
+</html>

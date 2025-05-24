@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Part Type - ID: {{ part_type.id }}</title>
+    <style>
+        body { font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif; margin: 20px; background-color: #f8f9fa; color: #212529; line-height: 1.5; }
+        h1 { color: #343a40; border-bottom: 1px solid #ced4da; padding-bottom: 8px; margin-bottom: 20px; font-weight: 600; }
+        form { max-width: 600px; margin-top: 20px; border: 1px solid #dee2e6; padding: 25px; border-radius: 5px; background-color: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .form-group { margin-bottom: 18px; }
+        label { display: block; margin-bottom: 6px; font-weight: 500; color: #495057;}
+        input[type=text], input[type=number], select, textarea { width: 100%; padding: 10px; border: 1px solid #ced4da; border-radius: 4px; box-sizing: border-box; font-size: 1em; }
+        textarea { min-height: 70px; resize: vertical; }
+        select { appearance: none; background-color: white; background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%236c757d%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E'); background-repeat: no-repeat; background-position: right .7em top 50%; background-size: .65em auto; padding-right: 2.5em; }
+        button { display: inline-block; padding: 10px 20px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 1em; }
+        .action-link { display: inline-block; margin-left: 15px; color: #6c757d; text-decoration: none; vertical-align: middle;}
+        .alert-error { color: #842029; border: 1px solid #f5c2c7; padding: 10px; margin-bottom: 10px; background-color: #f8d7da; border-radius: 4px; list-style: none; font-size: 0.95em;}
+        .required-star { color: #dc3545; margin-left: 3px;}
+        .optional-note { font-size: 0.9em; color: #6c757d; font-weight: normal; }
+    </style>
+</head>
+<body>
+    <h1>Edit Part Type: {{ part_type.part_name }} (ID: {{ part_type.id }})</h1>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                {% if category == 'error' %}
+                    <div class="alert-error">{{ message }}</div>
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    {% if part_type %}
+    <form action="{{ url_for('update_part_type', part_type_id=part_type.id) }}" method="POST">
+        <div class="form-group">
+            <label for="part_name">Part Name <span class="required-star">*</span></label>
+            <input type="text" id="part_name" name="part_name" required value="{{ request.form.get('part_name', part_type.part_name) }}">
+        </div>
+        <div class="form-group">
+            <label for="part_number">Part Number (SKU/Fabrikant) <span class="optional-note">(Optioneel, uniek)</span></label>
+            <input type="text" id="part_number" name="part_number" value="{{ request.form.get('part_number', part_type.part_number or '') }}">
+        </div>
+        <div class="form-group">
+            <label for="artikelnummer">Artikelnummer (Intern) <span class="optional-note">(Optioneel, uniek)</span></label>
+            <input type="text" id="artikelnummer" name="artikelnummer" value="{{ request.form.get('artikelnummer', part_type.artikelnummer or '') }}">
+        </div>
+         <div class="form-group">
+            <label for="brand">Brand <span class="optional-note">(e.g., Apple, Samsung)</span></label>
+            <input type="text" id="brand" name="brand" value="{{ request.form.get('brand', part_type.brand or '') }}">
+        </div>
+         <div class="form-group">
+            <label for="model">Model <span class="optional-note">(e.g., iPhone 14, Galaxy S23)</span></label>
+            <input type="text" id="model" name="model" value="{{ request.form.get('model', part_type.model or '') }}">
+        </div>
+        <div class="form-group">
+            <label for="part_type_category">Part Type Category</label>
+            <select id="part_type_category" name="part_type_category">
+                <option value="">-- Select Category --</option>
+                {% for type_cat in part_types_categories %}
+                    <option value="{{ type_cat }}" {% if request.form.get('part_type_category', part_type.part_type) == type_cat %}selected{% endif %}>
+                        {{ type_cat }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="cost_price">Default Cost Price <span class="optional-note">(Optional)</span></label>
+            <input type="number" id="cost_price" name="cost_price" step="0.01" min="0" value="{{ request.form.get('cost_price', part_type.cost_price if part_type.cost_price is not none else '') }}">
+        </div>
+        <div class="form-group">
+            <label for="storage_location">Default Storage Location <span class="optional-note">(Optional)</span></label>
+            <input type="text" id="storage_location" name="storage_location" value="{{ request.form.get('storage_location', part_type.storage_location or '') }}" placeholder="e.g., Shelf A, Bin 3">
+        </div>
+         <div class="form-group">
+            <label for="description">Description <span class="optional-note">(Optional)</span></label>
+            <textarea id="description" name="description" rows="3">{{ request.form.get('description', part_type.description or '') }}</textarea>
+        </div>
+        <div>
+            <button type="submit">Update Part Type</button>
+            <a href="{{ url_for('part_types_overview') }}" class="action-link">Cancel</a>
+        </div>
+    </form>
+    {% else %}
+        <p>Part Type not found.</p>
+        <a href="{{ url_for('part_types_overview') }}">Back to Part Types Overview</a>
+    {% endif %}
+</body>
+</html>

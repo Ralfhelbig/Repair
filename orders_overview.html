@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Orders Overview</title>
+    <style>
+        body { font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif; margin: 20px; background-color: #f8f9fa; color: #212529; font-size: 16px; line-height: 1.5; }
+        h1 { color: #343a40; border-bottom: 1px solid #ced4da; padding-bottom: 8px; margin-bottom: 20px; font-weight: 600; }
+        table { border-collapse: collapse; width: 100%; margin-top: 20px; background-color: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border: 1px solid #dee2e6; }
+        th, td { border-bottom: 1px solid #dee2e6; padding: 12px 15px; text-align: left; vertical-align: middle; }
+        th { background-color: #e9ecef; font-weight: 600; color: #495057; }
+        tr:nth-child(even) { background-color: #f8f9fa; }
+        tr:hover { background-color: #e9ecef; }
+        .search-form { margin-bottom: 25px; padding: 15px; background-color: #e9ecef; border-radius: 5px; display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .search-form label { font-weight: 500; color: #495057; }
+        .search-form input[type=text] { padding: 9px 12px; border: 1px solid #ced4da; border-radius: 4px; min-width: 250px; font-size: 0.95em; flex-grow: 1; }
+        .search-form button { padding: 9px 15px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.95em; }
+        .search-form a { color: #dc3545; text-decoration: none; font-size: 0.9em; }
+        .action-link { display: inline-block; margin-top: 25px; padding: 9px 15px; background-color: #6c757d; color: white; text-decoration: none; border-radius: 4px; font-size: 0.95em; }
+        .alert { padding: 15px; margin-bottom: 20px; border: 1px solid transparent; border-radius: 5px; font-size: 0.95em; }
+        .alert-error { color: #842029; background-color: #f8d7da; border-color: #f5c2c7; }
+        .no-results td { text-align: center; padding: 20px; color: #6c757d; font-style: italic; }
+        .date-col { white-space: nowrap; }
+        .qty-col { text-align: center; }
+        .number-col { font-family: monospace; font-size: 0.9em; color: #333; }
+    </style>
+</head>
+<body>
+    <h1>Stock Orders Overview</h1>
+    {% with messages = get_flashed_messages(with_categories=true) %} {% if messages %}
+        {% for category, message in messages %} <div class="alert alert-{{ category }}">{{ message }}</div> {% endfor %}
+    {% endif %} {% endwith %}
+
+    <form class="search-form" method="GET" action="{{ url_for('orders_overview') }}">
+        <label for="search_term_input">Search Orders/Parts:</label>
+        <input type="text" id="search_term_input" name="search_term" value="{{ search_term or '' }}" placeholder="Order No, Artikelnummer, Part No (GPC)...">
+        <button type="submit">Search</button>
+        {% if search_term %}<a href="{{ url_for('orders_overview') }}">(Clear Search)</a>{% endif %}
+    </form>
+
+    <table>
+        <thead>
+            <tr>
+                <th class="date-col">Order Date</th>
+                <th>Order Number</th>
+                <th>Part Type Name</th>
+                <th class="number-col">Part Number (SKU)</th>
+                <th class="number-col">Artikelnummer</th> <!-- Added column -->
+                <th>Brand</th>
+                <th>Model</th>
+                <th class="qty-col">Qty Received</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% if order_lines %}
+                {% for line in order_lines %}
+                <tr>
+                    <td class="date-col">{{ line['order_date'][:16] | default('N/A', true) }}</td>
+                    <td>{{ line['order_number'] | default('(No Ref)', true) }}</td>
+                    <td>{{ line['part_name'] }}</td>
+                    <td class="number-col">{{ line['part_number'] | default('-', true) }}</td>
+                    <td class="number-col">{{ line['artikelnummer'] | default('-', true) }}</td> <!-- Added data -->
+                    <td>{{ line['brand'] | default('-', true) }}</td>
+                    <td>{{ line['model'] | default('-', true) }}</td>
+                    <td class="qty-col">{{ line['quantity_received'] }}</td>
+                </tr>
+                {% endfor %}
+            {% else %}
+                <tr class="no-results">
+                    <td colspan="8"> <!-- Adjusted colspan -->
+                        {% if search_term %} No order lines found matching '{{ search_term }}'.
+                        {% else %} No stock order history. <a href="{{ url_for('receive_stock_form') }}">Receive Stock</a> to add.
+                        {% endif %}
+                    </td>
+                </tr>
+            {% endif %}
+        </tbody>
+    </table>
+    <a href="{{ url_for('index') }}" class="action-link">Back to Inventory</a>
+</body>
+</html>

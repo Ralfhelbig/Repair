@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Receive Stock</title>
+    <style>
+        body { font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif; margin: 20px; background-color: #f8f9fa; color: #212529; font-size: 16px; line-height: 1.5; }
+        h1 { color: #343a40; border-bottom: 1px solid #ced4da; padding-bottom: 8px; margin-bottom: 20px; font-weight: 600; }
+        h2 { color: #495057; margin: 25px 0 10px; font-size: 1.3em; font-weight: 600; }
+        form { margin-top: 20px; }
+        table { border-collapse: collapse; width: 100%; margin-top: 20px; background-color: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border: 1px solid #dee2e6; }
+        th, td { border-bottom: 1px solid #dee2e6; padding: 12px 15px; text-align: left; vertical-align: middle; }
+        th { background-color: #e9ecef; font-weight: 600; color: #495057; }
+        tr:nth-child(even) { background-color: #f8f9fa; }
+        input[type=number] { width: 90px; padding: 8px; border: 1px solid #ced4da; border-radius: 4px; box-sizing: border-box; font-size: 0.95em; }
+        input[type=text], input[type=date], textarea { padding: 10px; border: 1px solid #ced4da; border-radius: 4px; font-size: 1em; width: 100%; box-sizing: border-box; }
+        textarea { min-height: 60px; resize: vertical; }
+        label { font-weight: 500; margin-right: 8px; color: #495057; display: block; margin-bottom: 5px;}
+        .form-section { margin-bottom: 20px; padding: 15px; background-color: #e9ecef; border-radius: 5px; }
+        .form-group { margin-bottom: 15px; }
+        .filter-section { margin-bottom: 20px; padding: 15px; background-color: #e0e0e0; border-radius: 5px; display: flex; flex-wrap: wrap; gap: 15px; }
+        .filter-group { flex: 1; min-width: 200px;}
+        .filter-group label { font-size: 0.9em; margin-bottom: 3px; }
+        .filter-group input[type=text] { font-size: 0.95em; padding: 8px; }
+        button, .action-link { display: inline-block; margin-top: 20px; padding: 10px 20px; color: white; text-decoration: none; border-radius: 4px; border: none; cursor: pointer; font-size: 1em; transition: background-color 0.2s ease; }
+        button { background-color: #007bff; }
+        .action-link.cancel { background-color: #6c757d; margin-left: 15px; }
+        .alert { padding: 15px; margin-bottom: 20px; border: 1px solid transparent; border-radius: 5px; font-size: 0.95em; }
+        .alert-error { color: #842029; background-color: #f8d7da; border-color: #f5c2c7; }
+        .alert-warning { color: #664d03; background-color: #fff3cd; border-color: #ffecb5; }
+        .no-results td { text-align: center; padding: 20px; color: #6c757d; font-style: italic; }
+        .optional-note { font-size: 0.9em; color: #6c757d; font-weight: normal; }
+        .number-col { font-family: monospace; font-size: 0.9em; color: #333; }
+        .field-note { font-size: 0.9em; color: #6c757d; margin-top: 4px; display: block;}
+    </style>
+</head>
+<body>
+
+    <h1>Receive New Stock</h1>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <form action="{{ url_for('receive_stock') }}" method="POST">
+        <div class="form-section">
+            <h2>Order Details</h2>
+            <div class="form-group">
+                <label for="order_number">Order Reference / Number <span class="optional-note">(Optional)</span></label>
+                <input type="text" id="order_number" name="order_number" value="{{ submitted_order_number or '' }}" placeholder="Enter order ref...">
+            </div>
+            <div class="form-group">
+                <label for="order_date">Order Date <span class="optional-note">(Optional - Defaults to Now)</span></label>
+                <input type="date" id="order_date" name="order_date" value="{{ submitted_order_date or '' }}">
+                <span class="field-note">Leave blank to use current date and time.</span>
+            </div>
+            <div class="form-group">
+                <label for="order_notes">Order Notes <span class="optional-note">(Optional)</span></label>
+                <textarea id="order_notes" name="order_notes" rows="2">{{ submitted_notes or '' }}</textarea>
+            </div>
+        </div>
+
+        <h2>Filter Part Types</h2>
+        <div class="filter-section">
+            <div class="filter-group">
+                <label for="filterName">Part Name:</label>
+                <input type="text" id="filterName" onkeyup="filterTable()" placeholder="Filter by Part Name...">
+            </div>
+            <div class="filter-group">
+                <label for="filterSku">Part Number (SKU):</label>
+                <input type="text" id="filterSku" onkeyup="filterTable()" placeholder="Filter by SKU...">
+            </div>
+            <div class="filter-group">
+                <label for="filterArtikel">Artikelnummer:</label>
+                <input type="text" id="filterArtikel" onkeyup="filterTable()" placeholder="Filter by Artikelnummer...">
+            </div>
+            <div class="filter-group">
+                <label for="filterBrandModel">Brand / Model:</label>
+                <input type="text" id="filterBrandModel" onkeyup="filterTable()" placeholder="Filter by Brand/Model...">
+            </div>
+        </div>
+
+        <h2>Enter Quantities Received per Part Type</h2>
+        <table id="partTypesTable">
+            <thead>
+                <tr>
+                    <th>Part Type Name</th>
+                    <th>Part Number (SKU)</th>
+                    <th class="number-col">Artikelnummer</th>
+                    <th>Brand / Model</th>
+                    <th>Quantity Received</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if part_types_list %}
+                    {% for pt in part_types_list %}
+                    <tr>
+                        <td>{{ pt['part_name'] }}</td>
+                        <td class="number-col">{{ pt['part_number'] | default('-', true) }}</td>
+                        <td class="number-col">{{ pt['artikelnummer'] | default('-', true) }}</td>
+                        <td>{{ pt['brand'] | default('', true) }}{% if pt.brand and pt.model %}/{% endif %}{{ pt['model'] | default('', true) }}</td>
+                        <td>
+                            <input type="number" name="quantity_{{ pt['id'] }}" min="0" value="" placeholder="Qty" title="Quantity for {{ pt['part_name'] }}">
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr class="no-results">
+                        <td colspan="5">No Part Types found. <a href="{{ url_for('add_part_type_form') }}">Add New Part Type</a> first.</td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+
+        {% if part_types_list %}
+            <button type="submit">Add Received Items</button>
+        {% endif %}
+        <a href="{{ url_for('index') }}" class="action-link cancel">Cancel</a>
+    </form>
+
+<script>
+function filterTable() {
+    // Get filter values
+    let filterNameValue = document.getElementById('filterName').value.toLowerCase();
+    let filterSkuValue = document.getElementById('filterSku').value.toLowerCase();
+    let filterArtikelValue = document.getElementById('filterArtikel').value.toLowerCase();
+    let filterBrandModelValue = document.getElementById('filterBrandModel').value.toLowerCase();
+
+    let table = document.getElementById('partTypesTable');
+    let tr = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+
+    // Loop through all table rows, and hide those who don't match the search query
+    for (let i = 0; i < tr.length; i++) {
+        if (tr[i].classList.contains('no-results')) { 
+            // Make sure "no-results" row is only shown if all other rows are hidden
+            // This logic might need refinement depending on desired behavior of no-results row with filters
+            continue;
+        }
+        let tdName = tr[i].getElementsByTagName('td')[0];
+        let tdSku = tr[i].getElementsByTagName('td')[1];
+        let tdArtikel = tr[i].getElementsByTagName('td')[2];
+        let tdBrandModel = tr[i].getElementsByTagName('td')[3];
+
+        if (tdName && tdSku && tdArtikel && tdBrandModel) {
+            let nameText = tdName.textContent || tdName.innerText;
+            let skuText = tdSku.textContent || tdSku.innerText;
+            let artikelText = tdArtikel.textContent || tdArtikel.innerText;
+            let brandModelText = tdBrandModel.textContent || tdBrandModel.innerText;
+
+            let nameMatch = nameText.toLowerCase().indexOf(filterNameValue) > -1;
+            let skuMatch = skuText.toLowerCase().indexOf(filterSkuValue) > -1;
+            let artikelMatch = artikelText.toLowerCase().indexOf(filterArtikelValue) > -1;
+            let brandModelMatch = brandModelText.toLowerCase().indexOf(filterBrandModelValue) > -1;
+
+            if (nameMatch && skuMatch && artikelMatch && brandModelMatch) {
+                tr[i].style.display = "";
+            } else {
+                tr[i].style.display = "none";
+            }
+        }
+    }
+}
+</script>
+
+</body>
+</html>

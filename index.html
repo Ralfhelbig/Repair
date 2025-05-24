@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventory Items Overview</title>
+    <style>
+        body { font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif; margin: 20px; background-color: #f8f9fa; color: #212529; font-size: 16px; line-height: 1.5; }
+        h1 { color: #343a40; border-bottom: 1px solid #ced4da; padding-bottom: 8px; margin-bottom: 20px; font-weight: 600; }
+        h2 { color: #495057; margin: 30px 0 10px; font-size: 1.3em; font-weight: 600; }
+        table { border-collapse: collapse; width: 100%; margin-top: 20px; background-color: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border: 1px solid #dee2e6; }
+        th, td { border-bottom: 1px solid #dee2e6; padding: 10px 12px; text-align: left; vertical-align: middle; font-size: 0.95em; }
+        th { background-color: #e9ecef; font-weight: 600; color: #495057; }
+        tr:nth-child(even) { background-color: #f8f9fa; }
+        tr:hover { background-color: #e9ecef; }
+        .filter-section { margin-bottom: 20px; padding: 15px; background-color: #e9ecef; border-radius: 5px; display: flex; flex-wrap: wrap; align-items: center; gap: 15px; }
+        .filter-group label { font-weight: 500; margin-right: 8px; color: #495057; font-size: 0.9em; }
+        .filter-group select, .filter-group button { padding: 7px 10px; border: 1px solid #ced4da; border-radius: 4px; font-size: 0.9em; background-color: white; }
+        .filter-group a { margin-left: 10px; color: #dc3545; text-decoration: none; font-size: 0.9em; }
+        .action-button { display: inline-block; margin: 0 5px 15px 0; padding: 9px 14px; color: white; text-decoration: none; border-radius: 4px; border: none; cursor: pointer; font-size: 0.95em; }
+        .button-group { margin-bottom: 25px; border-bottom: 1px solid #dee2e6; padding-bottom: 20px; }
+        .alert { padding: 15px; margin-bottom: 20px; border: 1px solid transparent; border-radius: 5px; font-size: 0.95em; }
+        .alert-success { color: #0f5132; background-color: #d1e7dd; border-color: #badbcc; }
+        .alert-error { color: #842029; background-color: #f8d7da; border-color: #f5c2c7; }
+        .alert-warning { color: #664d03; background-color: #fff3cd; border-color: #ffecb5; }
+        .no-results td { text-align: center; padding: 20px; color: #6c757d; font-style: italic; }
+        .status-Available { color: green; font-weight: 500; }
+        .status-Reserved, .status-Installed { color: orange; font-weight: 500; }
+        .status-Broken, .status-Returned { color: red; font-weight: 500; }
+        .status-form { display: inline-flex; align-items: center; gap: 5px; }
+        .status-form select { padding: 4px 6px; font-size: 0.85em; }
+        .status-form button { padding: 4px 8px; font-size: 0.85em; background-color: #6c757d; border: none; color: white; border-radius: 3px; cursor: pointer; }
+        .item-old { background-color: #fff3cd !important; }
+        .age-alert-text { color: #856404; font-weight: bold; font-size: 0.9em; margin-left: 5px; }
+        .number-col { font-family: monospace; font-size: 0.9em; color: #333; } /* Style for numbers */
+    </style>
+</head>
+<body>
+
+    <h1>Inventory Items Overview</h1>
+
+    {% with messages = get_flashed_messages(with_categories=true) %} {% if messages %}
+        {% for category, message in messages %}
+         <div class="alert alert-{{ category }}">{{ message }}</div>
+        {% endfor %}
+    {% endif %} {% endwith %}
+
+    {% if show_old_stock_alert %}
+    <div class="alert alert-warning">
+        <strong>Warning:</strong> Stock orders older than {{ OLD_STOCK_THRESHOLD_MONTHS }} months have 'Available' or 'Reserved' items. Review <a href="{{ url_for('orders_overview') }}">Stock Orders</a> or items below.
+    </div>
+    {% endif %}
+
+    <div class="button-group">
+        <a href="{{ url_for('add_part_type_form') }}" class="action-button" style="background-color: #28a745;">Add New Part Type</a>
+         <a href="{{ url_for('part_types_overview') }}" class="action-button" style="background-color: #e83e8c;">Manage Part Types</a>
+        <a href="{{ url_for('receive_stock_form') }}" class="action-button" style="background-color: #007bff;">Receive Stock</a>
+        <a href="{{ url_for('receive_stock_fast_form') }}" class="action-button" style="background-color: #007bff; margin-left:5px;">Fast Receive Stock</a>
+        <a href="{{ url_for('orders_overview') }}" class="action-button" style="background-color: #17a2b8;">View Stock Orders</a>
+        <a href="{{ url_for('bookings_overview') }}" class="action-button" style="background-color: #ffc107; color: black;">View Repair Bookings</a>
+        <a href="{{ url_for('add_booking_form') }}" class="action-button" style="background-color: #fd7e14;">Add New Booking</a>
+    </div>
+
+    <h2>Filter Items</h2>
+    <div class="filter-section">
+         <form method="GET" action="{{ url_for('index') }}" style="display: contents; gap: 15px;">
+            <div class="filter-group">
+                <label for="filter_brand">Brand:</label>
+                <select name="brand" id="filter_brand" onchange="this.form.submit()">
+                    <option value="">-- All --</option>
+                    {% for brand in brands %}<option value="{{ brand }}" {% if current_filters.brand == brand %}selected{% endif %}>{{ brand }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="filter_model">Model:</label>
+                <select name="model" id="filter_model" onchange="this.form.submit()">
+                    <option value="">-- All --</option>
+                    {% for model in models %}<option value="{{ model }}" {% if current_filters.model == model %}selected{% endif %}>{{ model }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="filter_type">Type:</label>
+                <select name="type" id="filter_type" onchange="this.form.submit()">
+                    <option value="">-- All --</option>
+                    {% for type in part_type_list %}<option value="{{ type }}" {% if current_filters.type == type %}selected{% endif %}>{{ type }}</option>{% endfor %}
+                </select>
+            </div>
+             <div class="filter-group">
+                <label for="filter_status">Status:</label>
+                <select name="status" id="filter_status" onchange="this.form.submit()">
+                    <option value="">-- All --</option>
+                    {% for status in allowed_statuses %}<option value="{{ status }}" {% if current_filters.status == status %}selected{% endif %}>{{ status }}</option>{% endfor %}
+                </select>
+            </div>
+             {% if current_filters.brand or current_filters.model or current_filters.type or current_filters.status %}
+                <a href="{{ url_for('index') }}">(Clear Filters)</a>
+             {% endif %}
+        </form>
+    </div>
+
+    <h2>Items List</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Item ID</th>
+                <th>Part Name</th>
+                <th>Part Number (SKU)</th>
+                <th class="number-col">Artikelnummer</th>
+                <th class="number-col">Order Number</th> <th>Brand</th>
+                <th>Model</th>
+                <th>Type</th>
+                <th>Status</th>
+                <th>Location</th>
+                <th>Age (Days)</th>
+                <th>Notes</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% if items %}
+                {% for item in items %}
+                <tr {% if item.days_in_system > (OLD_STOCK_THRESHOLD_MONTHS * 30) %}class="item-old"{% endif %}>
+                    <td>{{ item['id'] }}</td>
+                    <td>{{ item['part_name'] }}</td>
+                    <td class="number-col">{{ item['part_number'] | default('-', true) }}</td>
+                    <td class="number-col">{{ item['artikelnummer'] | default('-', true) }}</td>
+                    <td class="number-col">{{ item['order_number'] | default('(No Order Ref)', true) }}</td> <td>{{ item['brand'] | default('-', true) }}</td>
+                    <td>{{ item['model'] | default('-', true) }}</td>
+                    <td>{{ item['part_type'] | default('-', true) }}</td>
+                    <td><span class="status-{{ item['status'] }}">{{ item['status'] }}</span></td>
+                    <td>{{ item['current_location'] | default(item['storage_location'], true) | default('-', true) }}</td>
+                    <td>
+                        {{ item.days_in_system if item.days_in_system is defined else 'N/A' }}
+                        {% if item.days_in_system > (OLD_STOCK_THRESHOLD_MONTHS * 30) %}
+                            <span class="age-alert-text">(Over {{ OLD_STOCK_THRESHOLD_MONTHS }} months!)</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ item['notes'] | default('', true) }}</td>
+                    <td>
+                        <form class="status-form" action="{{ url_for('update_item_status', item_id=item.id) }}" method="POST">
+                            <input type="hidden" name="return_url" value="{{ request.full_path }}">
+                            <select name="new_status">
+                                {% for status_option in allowed_statuses %}
+                                <option value="{{ status_option }}" {% if status_option == item.status %}selected disabled{% endif %}>
+                                    {{ status_option }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <button type="submit">Set</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            {% else %}
+                <tr class="no-results"><td colspan="13">No inventory items found.</td></tr>
+            {% endif %}
+        </tbody>
+    </table>
+</body>
+</html>

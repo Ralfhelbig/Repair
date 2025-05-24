@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Booking - ID: {{ booking.id }}</title>
+    <style>
+        body { font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif; margin: 20px; background-color: #f8f9fa; color: #212529; line-height: 1.5;}
+        h1 { color: #343a40; border-bottom: 1px solid #ced4da; padding-bottom: 8px; margin-bottom: 20px; font-weight: 600; }
+        form { max-width: 700px; margin-top: 20px; border: 1px solid #dee2e6; padding: 25px; border-radius: 5px; background-color: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .form-group { margin-bottom: 18px; }
+        label { display: block; margin-bottom: 6px; font-weight: 500; color: #495057;}
+        input[type=text], input[type=tel], input[type=date], textarea, select { width: 100%; padding: 10px; border: 1px solid #ced4da; border-radius: 4px; box-sizing: border-box; font-size: 1em; }
+        input[readonly] { background-color: #e9ecef; cursor: not-allowed; }
+        textarea { min-height: 120px; resize: vertical; }
+        select { appearance: none; background-color: white; padding-right: 2.5em; background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%236c757d%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E'); background-repeat: no-repeat; background-position: right .7em top 50%; background-size: .65em auto; }
+        button { display: inline-block; padding: 10px 20px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 1em; }
+        .action-link { display: inline-block; margin-left: 15px; color: #6c757d; text-decoration: none; vertical-align: middle;}
+        .alert-error { color: #842029; border: 1px solid #f5c2c7; padding: 10px; margin-bottom: 10px; background-color: #f8d7da; border-radius: 4px; list-style: none; font-size: 0.95em;}
+        .info-block { background-color: #f0f0f0; padding:10px; border-radius:4px; margin-bottom:15px; font-size:0.9em; }
+        .info-block p { margin: 5px 0; }
+        .info-block strong { display:inline-block; min-width:120px; }
+        .optional-note { font-size: 0.9em; color: #6c757d; font-weight: normal; }
+    </style>
+</head>
+<body>
+    <h1>Edit Booking #{{ booking.id }}</h1>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                {% if category == 'error' %}
+                    <div class="alert-error">{{ message }}</div>
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    {% if booking %}
+    <form action="{{ url_for('update_booking', booking_id=booking.id) }}" method="POST">
+        <div class="info-block">
+            <p><strong>Customer:</strong> {{ booking.customer_name }}</p>
+            <p><strong>Device:</strong> {{ booking.device_model }}</p>
+            <p><strong>Reported Issue:</strong> {{ booking.reported_issue }}</p>
+            <p><strong>Booked Date:</strong> {{ booking.booking_date[:16] | default('N/A') }}</p>
+        </div>
+
+        <!-- GPC Number Input Field -->
+        <div class="form-group">
+            <label for="gpc_number">GPC Number <span class="optional-note">(Optional, Klantnummer)</span></label>
+            <input type="text" id="gpc_number" name="gpc_number" value="{{ booking.gpc_number or '' }}">
+        </div>
+
+        <!-- ZIR Reference Input Field -->
+        <div class="form-group">
+            <label for="zir_reference">ZIR Reference <span class="optional-note">(Optional)</span></label>
+            <input type="text" id="zir_reference" name="zir_reference" value="{{ booking.zir_reference or '' }}">
+        </div>
+
+        <div class="form-group">
+            <label for="status">Status</label>
+            <select id="status" name="status">
+                {% for status_option in allowed_booking_statuses %}
+                <option value="{{ status_option }}" {% if status_option == booking.status %}selected{% endif %}>
+                    {{ status_option }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="notes">Repair Notes</label>
+            <textarea id="notes" name="notes" rows="5">{{ booking.notes or '' }}</textarea>
+        </div>
+
+        <div>
+            <button type="submit">Update Booking</button>
+            <a href="{{ url_for('bookings_overview') }}" class="action-link">Cancel</a>
+        </div>
+    </form>
+    {% else %}
+        <p>Booking not found.</p>
+        <a href="{{ url_for('bookings_overview') }}">Back to Bookings Overview</a>
+    {% endif %}
+</body>
+</html>

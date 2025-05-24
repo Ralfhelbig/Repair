@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add New Repair Booking</title>
+    <style>
+        body { font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif; margin: 20px; background-color: #f8f9fa; color: #212529; line-height: 1.5;}
+        h1 { color: #343a40; border-bottom: 1px solid #ced4da; padding-bottom: 8px; margin-bottom: 20px; font-weight: 600; }
+        form { max-width: 700px; margin-top: 20px; border: 1px solid #dee2e6; padding: 25px; border-radius: 5px; background-color: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .form-group { margin-bottom: 18px; }
+        label { display: block; margin-bottom: 6px; font-weight: 500; color: #495057;}
+        input[type=text], input[type=tel], input[type=date], textarea, select { width: 100%; padding: 10px; border: 1px solid #ced4da; border-radius: 4px; box-sizing: border-box; font-size: 1em; }
+        textarea { min-height: 80px; resize: vertical; }
+        select { appearance: none; background-color: white; background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%236c757d%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E'); background-repeat: no-repeat; background-position: right .7em top 50%; background-size: .65em auto; padding-right: 2.5em; }
+        button { display: inline-block; padding: 10px 20px; background-color: #fd7e14; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 1em; }
+        .action-link { display: inline-block; margin-left: 15px; color: #007bff; text-decoration: none; vertical-align: middle;}
+        .alert-error { color: #842029; border: 1px solid #f5c2c7; padding: 10px; margin-bottom: 10px; background-color: #f8d7da; border-radius: 4px; list-style: none; font-size: 0.95em;}
+        .required-star { color: #dc3545; margin-left: 3px;}
+        .optional-note, .field-note { font-size: 0.9em; color: #6c757d; font-weight: normal; }
+        .field-note { margin-top: 4px; display: block;}
+        hr { border: 0; border-top: 1px solid #dee2e6; margin: 25px 0; }
+    </style>
+</head>
+<body>
+    <h1>Add New Repair Booking</h1>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                {% if category == 'error' %}
+                    <div class="alert-error">{{ message }}</div>
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <form action="{{ url_for('add_booking') }}" method="POST">
+        <div class="form-group">
+            <label for="customer_name">Customer Name <span class="required-star">*</span></label>
+            <input type="text" id="customer_name" name="customer_name" required value="{{ submitted_data.customer_name if submitted_data else '' }}">
+        </div>
+        <div class="form-group">
+            <label for="customer_phone">Customer Phone <span class="optional-note">(Optional)</span></label>
+            <input type="tel" id="customer_phone" name="customer_phone" value="{{ submitted_data.customer_phone if submitted_data else '' }}">
+        </div>
+        <div class="form-group">
+            <label for="device_model">Device Model <span class="required-star">*</span></label>
+            <input type="text" id="device_model" name="device_model" required 
+                   value="{{ submitted_data.device_model if submitted_data else '' }}">
+        </div>
+        <div class="form-group">
+            <label for="device_serial">Device Serial/IMEI <span class="optional-note">(Optional)</span></label>
+            <input type="text" id="device_serial" name="device_serial" value="{{ submitted_data.device_serial if submitted_data else '' }}">
+        </div>
+        <div class="form-group">
+            <label for="gpc_number">GPC Number <span class="optional-note">(Optional, Klantnummer)</span></label>
+            <input type="text" id="gpc_number" name="gpc_number" value="{{ submitted_data.gpc_number if submitted_data else '' }}">
+        </div>
+        <div class="form-group">
+            <label for="zir_reference">ZIR Reference <span class="optional-note">(Optional)</span></label>
+            <input type="text" id="zir_reference" name="zir_reference" value="{{ submitted_data.zir_reference if submitted_data else '' }}">
+        </div>
+        <div class="form-group">
+            <label for="reported_issue">Reported Issue <span class="required-star">*</span></label>
+            <textarea id="reported_issue" name="reported_issue" required rows="3">{{ submitted_data.reported_issue if submitted_data else '' }}</textarea>
+        </div>
+        <div class="form-group">
+            <label for="booking_date">Booking Date <span class="optional-note">(Optional - Defaults to Now)</span></label>
+            <input type="date" id="booking_date" name="booking_date" value="{{ submitted_data.booking_date if submitted_data else '' }}">
+            <span class="field-note">Leave blank to use current date and time.</span>
+        </div>
+        <div class="form-group">
+            <label for="notes">Initial Notes <span class="optional-note">(Optional)</span></label>
+            <textarea id="notes" name="notes" rows="3">{{ submitted_data.notes if submitted_data else '' }}</textarea>
+        </div>
+        <hr>
+         <div class="form-group">
+            <label for="inventory_item_id">Assign Inventory Item <span class="optional-note">(Type device model to see parts)</span></label>
+            <select id="inventory_item_id" name="inventory_item_id">
+                <option value="">-- Enter Device Model to see parts --</option>
+                </select>
+             <span class="field-note">Assigns item to booking, status becomes 'Reserved'. Available parts for the entered model will appear here.</span>
+        </div>
+        <hr>
+        <div>
+            <button type="submit">Add Booking</button>
+            <a href="{{ url_for('bookings_overview') }}" class="action-link">Cancel</a>
+        </div>
+    </form>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const deviceModelInput = document.getElementById('device_model');
+    const inventoryItemSelect = document.getElementById('inventory_item_id');
+    let debounceTimer;
+
+    if (!deviceModelInput) {
+        console.error("Device model input field ('device_model') not found!");
+        if(inventoryItemSelect) inventoryItemSelect.innerHTML = '<option value="">Error: Device model input missing.</option>';
+        return;
+    }
+    if (!inventoryItemSelect) {
+        console.error("Inventory item select field ('inventory_item_id') not found!");
+        return;
+    }
+
+    deviceModelInput.addEventListener('input', function() {
+        clearTimeout(debounceTimer);
+        const modelQuery = this.value.trim();
+
+        if (modelQuery.length === 0) {
+            inventoryItemSelect.innerHTML = '<option value="">-- Enter Device Model to see parts --</option>';
+            return;
+        }
+        
+        inventoryItemSelect.innerHTML = '<option value="">Loading parts...</option>';
+
+        debounceTimer = setTimeout(() => {
+            fetch(`/api/parts_for_device?model=${encodeURIComponent(modelQuery)}`)
+                .then(response => {
+                    const contentType = response.headers.get("content-type");
+                    if (!response.ok) {
+                        if (contentType && contentType.indexOf("application/json") !== -1) {
+                            return response.json().then(errData => {
+                                throw new Error(errData.error_message || `Server error: ${response.status}`);
+                            });
+                        } else {
+                             return response.text().then(text => { // Get text for non-JSON errors
+                                throw new Error(`Could not load parts. Server error: ${response.status}. Response: ${text.substring(0,100)}`);
+                            });
+                        }
+                    }
+                    if (contentType && contentType.indexOf("application/json") !== -1) {
+                        return response.json();
+                    } else {
+                        // If not JSON, it's an unexpected response type
+                        return response.text().then(text => {
+                            throw new Error(`Unexpected response format from server. Expected JSON but got: ${text.substring(0,100)}`);
+                        });
+                    }
+                })
+                .then(data => {
+                    inventoryItemSelect.innerHTML = ''; // Clear "Loading..." or previous options
+
+                    if (data.error_message) { 
+                        console.error('API Error:', data.error_message);
+                        const errorOption = document.createElement('option');
+                        errorOption.value = "";
+                        errorOption.textContent = `Error: ${data.error_message}`;
+                        inventoryItemSelect.appendChild(errorOption);
+                        return;
+                    }
+                    
+                    if (Array.isArray(data) && data.length === 0) {
+                        const noPartsOption = document.createElement('option');
+                        noPartsOption.value = "";
+                        noPartsOption.textContent = "-- No available parts match this model --";
+                        inventoryItemSelect.appendChild(noPartsOption);
+                    } else if (Array.isArray(data)) {
+                        const defaultOption = document.createElement('option');
+                        defaultOption.value = "";
+                        defaultOption.textContent = "-- Select a Part --";
+                        inventoryItemSelect.appendChild(defaultOption);
+
+                        data.forEach(item => {
+                            const option = document.createElement('option');
+                            option.value = item.id;
+                            let serialText = item.serial_number ? `, SN: ${item.serial_number}` : '';
+                            option.textContent = `${item.part_name} (${item.brand || 'N/A'} ${item.model || ''}) - ID: ${item.id}${serialText}`;
+                            inventoryItemSelect.appendChild(option);
+                        });
+                    } else {
+                        const errorOption = document.createElement('option');
+                        errorOption.value = "";
+                        errorOption.textContent = "Received unexpected data format for parts.";
+                        inventoryItemSelect.appendChild(errorOption);
+                    }
+                })
+                .catch(error => {
+                    console.error('JavaScript Fetch Error:', error);
+                    inventoryItemSelect.innerHTML = `<option value="">Error: ${error.message}</option>`;
+                });
+        }, 300);
+    });
+
+    if (deviceModelInput.value.trim() === '') {
+         inventoryItemSelect.innerHTML = '<option value="">-- Enter Device Model to see parts --</option>';
+    } else {
+         // If model field is pre-filled (e.g., from form resubmission after error), trigger the fetch
+         deviceModelInput.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+});
+</script>
+</body>
+</html>
